@@ -48,6 +48,8 @@ redis==5.0.1
 
 # Docker SDK (for running tools in containers)
 docker==6.1.3
+requests==2.31.0
+urllib3==2.0.7
 
 # MinIO client (for S3 storage)
 minio==7.2.3
