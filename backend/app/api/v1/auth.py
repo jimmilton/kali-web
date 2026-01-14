@@ -43,15 +43,15 @@ router = APIRouter()
 
 @router.post(
     "/register",
-    response_model=UserResponse,
+    response_model=Token,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(auth_rate_limit)],
 )
 async def register(
     data: RegisterRequest,
     db: DbSession,
-) -> User:
-    """Register a new user."""
+) -> dict:
+    """Register a new user and return authentication tokens."""
     # Check if user already exists
     result = await db.execute(
         select(User).where((User.email == data.email) | (User.username == data.username))
@@ -79,7 +79,27 @@ async def register(
     await db.flush()
     await db.refresh(user)
 
-    return user
+    # Create tokens (auto-login after registration)
+    access_token = create_access_token(
+        subject=user.id,
+        additional_claims={"role": user.role},
+    )
+    refresh_token, token_hash, expires_at = create_refresh_token(subject=user.id)
+
+    # Store refresh token
+    refresh_token_record = RefreshToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+    )
+    db.add(refresh_token_record)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": 30 * 60,  # 30 minutes in seconds
+    }
 
 
 @router.post("/login", response_model=Token, dependencies=[Depends(auth_rate_limit)])

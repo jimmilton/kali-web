@@ -12,9 +12,11 @@ from app.core.security import verify_token
 logger = logging.getLogger(__name__)
 
 # Create Socket.IO server
+# Use "*" string for wildcard CORS (Socket.IO doesn't accept ["*"] list)
+cors_origins = "*" if settings.cors_origins == ["*"] else settings.cors_origins
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins=settings.cors_origins,
+    cors_allowed_origins=cors_origins,
     logger=True,
     engineio_logger=True if settings.debug else False,
 )
