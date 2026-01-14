@@ -38,7 +38,7 @@ class DockerRunner:
         self.environment = environment or {}
         self.volumes = volumes or {}
 
-        self.client = docker.from_env()
+        self.client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
         self.container = None
 
     async def run(
@@ -192,7 +192,7 @@ class DockerManager:
     """Manager for Docker operations."""
 
     def __init__(self):
-        self.client = docker.from_env()
+        self.client = docker.DockerClient(base_url='unix:///var/run/docker.sock')
 
     def list_tool_images(self) -> list:
         """List available tool images."""
