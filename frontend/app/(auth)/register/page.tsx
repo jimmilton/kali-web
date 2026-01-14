@@ -64,7 +64,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     clearError();
     try {
-      await registerUser(data.email, data.username, data.password);
+      await registerUser(data.email, data.username, data.password, data.confirmPassword);
       toast({
         title: 'Account created!',
         description: 'Welcome to kwebbie.',

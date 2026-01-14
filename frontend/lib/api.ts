@@ -97,7 +97,7 @@ export const authApi = {
       { username, password, mfa_code }
     ),
 
-  register: (data: { email: string; username: string; password: string }) =>
+  register: (data: { email: string; username: string; password: string; confirm_password: string }) =>
     api.post<{ access_token: string; refresh_token: string; token_type: string }>(
       '/api/v1/auth/register',
       data

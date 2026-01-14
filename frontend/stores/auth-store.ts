@@ -10,7 +10,7 @@ interface AuthState {
   error: string | null;
 
   login: (username: string, password: string, mfaCode?: string) => Promise<void>;
-  register: (email: string, username: string, password: string) => Promise<void>;
+  register: (email: string, username: string, password: string, confirm_password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
   fetchUser: () => Promise<void>;
@@ -47,10 +47,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      register: async (email: string, username: string, password: string) => {
+      register: async (email: string, username: string, password: string, confirm_password: string) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await authApi.register({ email, username, password });
+          const response = await authApi.register({ email, username, password, confirm_password });
           setTokens(response.access_token, response.refresh_token);
           const user = await authApi.me();
           set({ user, isAuthenticated: true, isLoading: false });
