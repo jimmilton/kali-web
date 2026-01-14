@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ report.title }} - Compliance Report</title>
+    <style>
+        :root { --primary-color: {{ branding.primary_color or '#1e40af' }}; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px; }
+        h1 { color: var(--primary-color); font-size: 28px; margin-bottom: 25px; border-bottom: 3px solid var(--primary-color); padding-bottom: 10px; }
+        h2 { color: var(--primary-color); font-size: 20px; margin: 30px 0 15px; }
+        h3 { color: #374151; font-size: 16px; margin: 20px 0 10px; }
+        p { margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #d1d5db; padding: 10px; text-align: left; }
+        th { background-color: var(--primary-color); color: white; }
+        .cover { text-align: center; padding: 100px 40px; page-break-after: always; }
+        .status-pass { color: #16a34a; font-weight: bold; }
+        .status-fail { color: #dc2626; font-weight: bold; }
+        .status-partial { color: #ca8a04; font-weight: bold; }
+        .control-card { border: 1px solid #e5e7eb; border-radius: 8px; margin: 15px 0; overflow: hidden; }
+        .control-header { padding: 12px 15px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .control-body { padding: 15px; }
+        .progress-bar { height: 20px; background: #e5e7eb; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #16a34a, #22c55e); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Cover -->
+        <div class="cover">
+            {% if branding.company_name %}
+            <p style="font-size: 18px; color: #6b7280;">{{ branding.company_name }}</p>
+            {% endif %}
+            <h1 style="font-size: 36px; border: none;">Compliance Assessment Report</h1>
+            <p style="font-size: 16px; color: #4b5563; margin-top: 20px;">{{ project.name if project else '' }}</p>
+            <p style="color: #9ca3af; margin-top: 40px;">{{ generated_at.strftime('%B %d, %Y') }}</p>
+        </div>
+
+        <h1>Compliance Assessment Summary</h1>
+
+        <h2>Assessment Overview</h2>
+        <p>This compliance report provides an assessment of the security controls and vulnerabilities identified during the security assessment of {{ project.name if project else 'the target environment' }}.</p>
+
+        <!-- Compliance Score -->
+        <h2>Overall Compliance Score</h2>
+        {% set total_vulns = vulnerabilities|length %}
+        {% set critical_high = severity_counts.critical + severity_counts.high %}
+        {% set compliance_score = 100 - (critical_high * 10) - (severity_counts.medium * 3) - (severity_counts.low) %}
+        {% set compliance_score = [compliance_score, 0]|max %}
+
+        <div style="text-align: center; margin: 30px 0;">
+            <div style="font-size: 64px; font-weight: bold; color: {% if compliance_score >= 80 %}#16a34a{% elif compliance_score >= 60 %}#ca8a04{% else %}#dc2626{% endif %};">
+                {{ compliance_score }}%
+            </div>
+            <div style="font-size: 14px; color: #6b7280;">Compliance Score</div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ compliance_score }}%; background: {% if compliance_score >= 80 %}linear-gradient(90deg, #16a34a, #22c55e){% elif compliance_score >= 60 %}linear-gradient(90deg, #ca8a04, #eab308){% else %}linear-gradient(90deg, #dc2626, #ef4444){% endif %};"></div>
+        </div>
+
+        <!-- Findings Impact on Compliance -->
+        <h2>Security Findings Impact</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Severity</th>
+                    <th>Count</th>
+                    <th>Compliance Impact</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Critical</td>
+                    <td>{{ severity_counts.critical }}</td>
+                    <td>High - Immediate remediation required</td>
+                    <td class="{% if severity_counts.critical == 0 %}status-pass{% else %}status-fail{% endif %}">
+                        {% if severity_counts.critical == 0 %}PASS{% else %}FAIL{% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>High</td>
+                    <td>{{ severity_counts.high }}</td>
+                    <td>High - Remediation within 7 days</td>
+                    <td class="{% if severity_counts.high == 0 %}status-pass{% else %}status-fail{% endif %}">
+                        {% if severity_counts.high == 0 %}PASS{% else %}FAIL{% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Medium</td>
+                    <td>{{ severity_counts.medium }}</td>
+                    <td>Medium - Remediation within 30 days</td>
+                    <td class="{% if severity_counts.medium == 0 %}status-pass{% elif severity_counts.medium <= 5 %}status-partial{% else %}status-fail{% endif %}">
+                        {% if severity_counts.medium == 0 %}PASS{% elif severity_counts.medium <= 5 %}PARTIAL{% else %}FAIL{% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Low</td>
+                    <td>{{ severity_counts.low }}</td>
+                    <td>Low - Remediation within 90 days</td>
+                    <td class="status-pass">PASS</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- CWE Categories -->
+        <h2>Common Weakness Enumeration (CWE) Analysis</h2>
+        {% set cwe_list = [] %}
+        {% for vuln in vulnerabilities %}
+            {% for cwe in vuln.cwe_ids %}
+                {% if cwe not in cwe_list %}
+                    {% set _ = cwe_list.append(cwe) %}
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+
+        {% if cwe_list %}
+        <table>
+            <thead>
+                <tr>
+                    <th>CWE ID</th>
+                    <th>Occurrences</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cwe in cwe_list[:10] %}
+                <tr>
+                    <td>{{ cwe }}</td>
+                    <td>{{ vulnerabilities|selectattr('cwe_ids', 'contains', cwe)|list|length }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No CWE classifications available for the identified vulnerabilities.</p>
+        {% endif %}
+
+        <!-- Remediation Requirements -->
+        <h2>Compliance Remediation Requirements</h2>
+
+        {% if severity_counts.critical > 0 %}
+        <div class="control-card" style="border-left: 4px solid #dc2626;">
+            <div class="control-header">
+                <strong>Critical Findings Remediation</strong>
+                <span class="status-fail">REQUIRED</span>
+            </div>
+            <div class="control-body">
+                <p>{{ severity_counts.critical }} critical vulnerabilities must be remediated immediately to achieve compliance.</p>
+                <ul style="padding-left: 20px; margin-top: 10px;">
+                    {% for vuln in vulnerabilities|selectattr('severity', 'equalto', 'critical')|list[:5] %}
+                    <li>{{ vuln.title }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if severity_counts.high > 0 %}
+        <div class="control-card" style="border-left: 4px solid #ea580c;">
+            <div class="control-header">
+                <strong>High Severity Remediation</strong>
+                <span class="status-fail">REQUIRED</span>
+            </div>
+            <div class="control-body">
+                <p>{{ severity_counts.high }} high severity vulnerabilities require remediation within 7 days.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Attestation -->
+        <h2 style="page-break-before: always;">Attestation</h2>
+        <div style="border: 2px solid #e5e7eb; padding: 30px; margin: 20px 0;">
+            <p>This report was generated on {{ generated_at.strftime('%B %d, %Y at %H:%M UTC') }} and represents the security posture at that point in time.</p>
+            <p style="margin-top: 40px;">
+                <strong>Prepared By:</strong> _______________________________
+            </p>
+            <p style="margin-top: 20px;">
+                <strong>Date:</strong> _______________________________
+            </p>
+            <p style="margin-top: 20px;">
+                <strong>Signature:</strong> _______________________________
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 10pt; color: #6b7280;">
+            {{ branding.footer_text or 'Confidential Compliance Report' }}
+        </div>
+    </div>
+</body>
+</html>

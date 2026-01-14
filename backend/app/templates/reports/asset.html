@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ report.title }} - Asset Inventory</title>
+    <style>
+        :root { --primary-color: {{ branding.primary_color or '#1e40af' }}; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; }
+        .container { max-width: 900px; margin: 0 auto; padding: 30px; }
+        h1 { color: var(--primary-color); font-size: 24px; margin-bottom: 20px; }
+        h2 { color: var(--primary-color); font-size: 18px; margin: 25px 0 15px; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10pt; }
+        th, td { border: 1px solid #d1d5db; padding: 10px; text-align: left; }
+        th { background-color: var(--primary-color); color: white; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+        .type-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10pt; font-weight: 500; }
+        .type-host { background: #dbeafe; color: #1e40af; }
+        .type-domain { background: #d1fae5; color: #065f46; }
+        .type-subdomain { background: #e0e7ff; color: #3730a3; }
+        .type-url { background: #fef3c7; color: #92400e; }
+        .type-service { background: #fce7f3; color: #9d174d; }
+        .stat-grid { display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; }
+        .stat-card { flex: 1; min-width: 120px; text-align: center; padding: 20px; background: #f3f4f6; border-radius: 8px; }
+        .stat-value { font-size: 28px; font-weight: bold; color: var(--primary-color); }
+        .stat-label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ report.title }}</h1>
+        <p>Project: {{ project.name if project else 'N/A' }} | Generated: {{ generated_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+
+        <!-- Summary -->
+        <h2>Asset Summary</h2>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ assets|length }}</div>
+                <div class="stat-label">Total Assets</div>
+            </div>
+            {% for type, count in asset_counts.items() %}
+            <div class="stat-card">
+                <div class="stat-value">{{ count }}</div>
+                <div class="stat-label">{{ type|capitalize }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Assets by Type -->
+        {% for asset_type in ['host', 'domain', 'subdomain', 'url', 'service', 'endpoint'] %}
+        {% set type_assets = assets|selectattr('type', 'equalto', asset_type)|list %}
+        {% if type_assets %}
+        <h2>{{ asset_type|capitalize }}s ({{ type_assets|length }})</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Value</th>
+                    <th>Status</th>
+                    <th>Risk Score</th>
+                    <th>Vulnerabilities</th>
+                    <th>Tags</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in type_assets %}
+                <tr>
+                    <td>{{ asset.value }}</td>
+                    <td>{{ asset.status }}</td>
+                    <td>{{ asset.risk_score }}</td>
+                    <td>{{ asset.vulnerabilities|length }}</td>
+                    <td>{{ asset.tags|join(', ') if asset.tags else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+        {% endfor %}
+
+        <!-- Full Asset Table -->
+        <h2>Complete Asset Inventory</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 100px;">Type</th>
+                    <th>Value</th>
+                    <th style="width: 80px;">Status</th>
+                    <th style="width: 60px;">Risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><span class="type-badge type-{{ asset.type }}">{{ asset.type }}</span></td>
+                    <td>{{ asset.value }}</td>
+                    <td>{{ asset.status }}</td>
+                    <td>{{ asset.risk_score }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 10pt; color: #6b7280;">
+            {{ branding.footer_text or 'Confidential Asset Inventory' }}
+        </div>
+    </div>
+</body>
+</html>

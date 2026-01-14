@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+{{ super() }}
+
+{% if content.custom_sections %}
+{% for section in content.custom_sections %}
+<div class="section">
+    <h1>{{ section.title }}</h1>
+    {{ section.content|safe }}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

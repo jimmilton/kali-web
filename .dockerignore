@@ -1,0 +1,51 @@
+# kwebbie - Copyright 2025 milbert.ai
+
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+frontend/node_modules
+frontend/.next
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+*.egg-info
+.venv
+venv
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker
+docker-compose*.yml
+tool-images
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Tests
+tests
+**/tests
+**/*_test.py
+**/*_test.ts
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log

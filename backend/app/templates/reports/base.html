@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ report.title }}</title>
+    <style>
+        :root {
+            --primary-color: {{ branding.primary_color or '#1e40af' }};
+            --secondary-color: {{ branding.secondary_color or '#3b82f6' }};
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px; }
+        h1 { color: var(--primary-color); font-size: 28px; margin-bottom: 20px; border-bottom: 3px solid var(--primary-color); padding-bottom: 10px; }
+        h2 { color: var(--primary-color); font-size: 22px; margin-top: 30px; margin-bottom: 15px; }
+        h3 { color: #374151; font-size: 18px; margin-top: 20px; margin-bottom: 10px; }
+        p { margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background-color: var(--primary-color); color: white; font-weight: 600; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+        .cover { text-align: center; padding: 100px 40px; page-break-after: always; }
+        .cover h1 { font-size: 36px; border: none; margin-bottom: 30px; }
+        .cover .company { font-size: 18px; color: #6b7280; margin-bottom: 40px; }
+        .cover .date { font-size: 14px; color: #9ca3af; }
+        .severity-badge { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: bold; color: white; font-size: 12px; text-transform: uppercase; }
+        .severity-critical { background-color: #dc2626; }
+        .severity-high { background-color: #ea580c; }
+        .severity-medium { background-color: #ca8a04; }
+        .severity-low { background-color: #16a34a; }
+        .severity-info { background-color: #2563eb; }
+        .finding { margin-bottom: 30px; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; page-break-inside: avoid; }
+        .finding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .finding-title { font-size: 16px; font-weight: 600; color: #1f2937; }
+        .evidence { background-color: #f3f4f6; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; margin: 10px 0; }
+        .stat-card { display: inline-block; padding: 20px 30px; margin: 10px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 32px; font-weight: bold; }
+        .stat-label { font-size: 12px; text-transform: uppercase; opacity: 0.9; }
+        .summary-grid { display: flex; flex-wrap: wrap; justify-content: center; margin: 30px 0; }
+        .toc { page-break-after: always; }
+        .toc ul { list-style: none; }
+        .toc li { padding: 8px 0; border-bottom: 1px dotted #e5e7eb; }
+        .toc a { color: var(--primary-color); text-decoration: none; }
+        .section { page-break-before: always; }
+        .footer { text-align: center; font-size: 12px; color: #6b7280; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% block content %}
+        <!-- Cover Page -->
+        <div class="cover">
+            {% if branding.logo_url %}
+            <img src="{{ branding.logo_url }}" alt="Logo" style="max-width: 200px; margin-bottom: 30px;">
+            {% endif %}
+            {% if branding.company_name %}
+            <div class="company">{{ branding.company_name }}</div>
+            {% endif %}
+            <h1>{{ report.title }}</h1>
+            {% if project %}
+            <p style="font-size: 18px; color: #4b5563;">{{ project.name }}</p>
+            {% endif %}
+            {% if report.description %}
+            <p style="color: #6b7280; margin-top: 20px;">{{ report.description }}</p>
+            {% endif %}
+            <div class="date">Generated: {{ generated_at.strftime('%B %d, %Y') }}</div>
+        </div>
+
+        <!-- Executive Summary -->
+        {% if 'executive_summary' in sections %}
+        <div class="section">
+            <h1>Executive Summary</h1>
+            <p>This security assessment report presents the findings from testing conducted on <strong>{{ project.name if project else 'the target environment' }}</strong>.</p>
+
+            <div class="summary-grid">
+                <div class="stat-card">
+                    <div class="stat-value">{{ vulnerabilities|length }}</div>
+                    <div class="stat-label">Total Findings</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                    <div class="stat-value">{{ severity_counts.critical }}</div>
+                    <div class="stat-label">Critical</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #ea580c, #f97316);">
+                    <div class="stat-value">{{ severity_counts.high }}</div>
+                    <div class="stat-label">High</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #ca8a04, #eab308);">
+                    <div class="stat-value">{{ severity_counts.medium }}</div>
+                    <div class="stat-label">Medium</div>
+                </div>
+            </div>
+
+            <h2>Risk Assessment</h2>
+            <p>Based on the findings, the overall security risk score is <strong>{{ risk_score }}/100</strong>.</p>
+
+            {% if severity_counts.critical > 0 %}
+            <p style="color: #dc2626; font-weight: bold;">IMMEDIATE ACTION REQUIRED: {{ severity_counts.critical }} critical vulnerabilities require urgent remediation.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Scope -->
+        {% if 'scope' in sections %}
+        <div class="section">
+            <h1>Scope</h1>
+            <p>The following {{ assets|length }} assets were included in this assessment:</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Value</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in assets[:50] %}
+                    <tr>
+                        <td>{{ asset.type }}</td>
+                        <td>{{ asset.value }}</td>
+                        <td>{{ asset.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if assets|length > 50 %}
+            <p><em>... and {{ assets|length - 50 }} more assets</em></p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Findings -->
+        {% if 'findings' in sections %}
+        <div class="section">
+            <h1>Detailed Findings</h1>
+
+            {% for vuln in vulnerabilities %}
+            <div class="finding">
+                <div class="finding-header">
+                    <span class="finding-title">{{ loop.index }}. {{ vuln.title }}</span>
+                    <span class="severity-badge severity-{{ vuln.severity }}">{{ vuln.severity }}</span>
+                </div>
+
+                <table style="margin: 10px 0;">
+                    <tr>
+                        <td style="width: 120px; font-weight: 600;">Status</td>
+                        <td>{{ vuln.status }}</td>
+                    </tr>
+                    {% if vuln.cvss_score %}
+                    <tr>
+                        <td style="font-weight: 600;">CVSS Score</td>
+                        <td>{{ vuln.cvss_score }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if vuln.cve_ids %}
+                    <tr>
+                        <td style="font-weight: 600;">CVE IDs</td>
+                        <td>{{ vuln.cve_ids|join(', ') }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if vuln.asset %}
+                    <tr>
+                        <td style="font-weight: 600;">Affected Asset</td>
+                        <td>{{ vuln.asset.type }}: {{ vuln.asset.value }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                {% if vuln.description %}
+                <h3>Description</h3>
+                <p>{{ vuln.description }}</p>
+                {% endif %}
+
+                {% if content.include_evidence and vuln.evidence %}
+                <h3>Evidence</h3>
+                <div class="evidence">{{ vuln.evidence }}</div>
+                {% endif %}
+
+                {% if content.include_remediation and vuln.remediation %}
+                <h3>Remediation</h3>
+                <p>{{ vuln.remediation }}</p>
+                {% endif %}
+
+                {% if content.include_references and vuln.references %}
+                <h3>References</h3>
+                <ul>
+                    {% for ref in vuln.references %}
+                    <li><a href="{{ ref }}">{{ ref }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Recommendations -->
+        {% if 'recommendations' in sections %}
+        <div class="section">
+            <h1>Recommendations</h1>
+
+            <h2>Priority Actions</h2>
+            <ol>
+                {% if severity_counts.critical > 0 %}
+                <li><strong>IMMEDIATE:</strong> Address all {{ severity_counts.critical }} critical severity findings immediately. These pose imminent risk.</li>
+                {% endif %}
+                {% if severity_counts.high > 0 %}
+                <li><strong>HIGH PRIORITY:</strong> Remediate {{ severity_counts.high }} high severity findings within 7-14 days.</li>
+                {% endif %}
+                {% if severity_counts.medium > 0 %}
+                <li><strong>PLANNED:</strong> Address {{ severity_counts.medium }} medium severity findings within 30-60 days.</li>
+                {% endif %}
+                <li>Implement regular vulnerability scanning and patch management.</li>
+                <li>Conduct periodic security assessments to identify new vulnerabilities.</li>
+                <li>Establish an incident response plan for security breaches.</li>
+            </ol>
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            {% if branding.footer_text %}
+            {{ branding.footer_text }}
+            {% else %}
+            CONFIDENTIAL - For authorized personnel only
+            {% endif %}
+        </div>
+        {% endblock %}
+    </div>
+</body>
+</html>

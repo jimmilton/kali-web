@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ report.title }} - Executive Summary</title>
+    <style>
+        :root {
+            --primary-color: {{ branding.primary_color or '#1e40af' }};
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.8; color: #1f2937; }
+        .container { max-width: 900px; margin: 0 auto; padding: 50px; }
+        h1 { color: var(--primary-color); font-size: 32px; margin-bottom: 30px; text-align: center; }
+        h2 { color: var(--primary-color); font-size: 24px; margin: 40px 0 20px; border-left: 4px solid var(--primary-color); padding-left: 15px; }
+        p { margin-bottom: 15px; font-size: 14px; }
+        .cover { text-align: center; padding: 80px 40px; page-break-after: always; }
+        .metrics { display: flex; justify-content: space-around; margin: 40px 0; flex-wrap: wrap; }
+        .metric { text-align: center; padding: 30px; min-width: 150px; }
+        .metric-value { font-size: 48px; font-weight: bold; color: var(--primary-color); }
+        .metric-label { font-size: 14px; color: #6b7280; text-transform: uppercase; }
+        .risk-meter { height: 30px; background: linear-gradient(to right, #16a34a 0%, #ca8a04 50%, #dc2626 100%); border-radius: 15px; position: relative; margin: 20px 0; }
+        .risk-indicator { position: absolute; top: -5px; width: 40px; height: 40px; background: white; border: 3px solid #1f2937; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+        .summary-table { width: 100%; margin: 30px 0; }
+        .summary-table td { padding: 15px; border-bottom: 1px solid #e5e7eb; }
+        .summary-table td:first-child { font-weight: 600; width: 40%; }
+        .highlight { background-color: #fef3c7; padding: 20px; border-left: 4px solid #f59e0b; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 60px; padding-top: 20px; border-top: 2px solid #e5e7eb; font-size: 12px; color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Cover -->
+        <div class="cover">
+            {% if branding.company_name %}
+            <p style="font-size: 20px; color: #6b7280; margin-bottom: 40px;">{{ branding.company_name }}</p>
+            {% endif %}
+            <h1 style="font-size: 40px; border: none;">Security Assessment</h1>
+            <h1 style="font-size: 28px; border: none; color: #4b5563;">Executive Summary</h1>
+            <p style="font-size: 18px; margin-top: 40px;">{{ project.name if project else '' }}</p>
+            <p style="color: #9ca3af; margin-top: 60px;">{{ generated_at.strftime('%B %d, %Y') }}</p>
+        </div>
+
+        <!-- Overview -->
+        <h2>Assessment Overview</h2>
+        <p>A comprehensive security assessment was conducted on {{ project.name if project else 'the target environment' }}. This executive summary provides a high-level overview of the security posture and key findings.</p>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value">{{ vulnerabilities|length }}</div>
+                <div class="metric-label">Total Findings</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" style="color: #dc2626;">{{ severity_counts.critical + severity_counts.high }}</div>
+                <div class="metric-label">Critical/High</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">{{ assets|length }}</div>
+                <div class="metric-label">Assets Tested</div>
+            </div>
+        </div>
+
+        <!-- Risk Score -->
+        <h2>Risk Score</h2>
+        <div class="risk-meter">
+            <div class="risk-indicator" style="left: calc({{ risk_score }}% - 20px);">{{ risk_score }}</div>
+        </div>
+        <p style="text-align: center; color: #6b7280;">Overall Risk: {{ risk_score }}/100 -
+            {% if risk_score >= 75 %}CRITICAL{% elif risk_score >= 50 %}HIGH{% elif risk_score >= 25 %}MEDIUM{% else %}LOW{% endif %}
+        </p>
+
+        <!-- Key Findings -->
+        <h2>Key Findings Summary</h2>
+        <table class="summary-table">
+            <tr>
+                <td>Critical Vulnerabilities</td>
+                <td style="color: #dc2626; font-weight: bold;">{{ severity_counts.critical }}</td>
+            </tr>
+            <tr>
+                <td>High Vulnerabilities</td>
+                <td style="color: #ea580c; font-weight: bold;">{{ severity_counts.high }}</td>
+            </tr>
+            <tr>
+                <td>Medium Vulnerabilities</td>
+                <td style="color: #ca8a04;">{{ severity_counts.medium }}</td>
+            </tr>
+            <tr>
+                <td>Low/Informational</td>
+                <td>{{ severity_counts.low + severity_counts.info }}</td>
+            </tr>
+        </table>
+
+        {% if severity_counts.critical > 0 %}
+        <div class="highlight">
+            <strong>Immediate Action Required:</strong> {{ severity_counts.critical }} critical vulnerabilities were identified that require immediate attention. These findings pose significant risk to the organization's security posture.
+        </div>
+        {% endif %}
+
+        <!-- Top Findings -->
+        <h2>Top Priority Findings</h2>
+        {% for vuln in vulnerabilities[:5] %}
+        <div style="padding: 15px; margin: 10px 0; border-left: 4px solid {{ vuln.severity|severity_color }}; background: #f9fafb;">
+            <strong>{{ vuln.title }}</strong>
+            <span style="float: right; color: {{ vuln.severity|severity_color }}; font-weight: bold;">{{ vuln.severity|upper }}</span>
+            {% if vuln.description %}
+            <p style="margin-top: 10px; font-size: 13px; color: #4b5563;">{{ vuln.description[:200] }}{% if vuln.description|length > 200 %}...{% endif %}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <!-- Recommendations -->
+        <h2>Strategic Recommendations</h2>
+        <ol style="padding-left: 20px;">
+            {% if severity_counts.critical > 0 %}
+            <li style="margin-bottom: 15px;"><strong>Immediate Remediation:</strong> Address critical vulnerabilities within 24-48 hours to prevent potential exploitation.</li>
+            {% endif %}
+            <li style="margin-bottom: 15px;"><strong>Patch Management:</strong> Implement a robust patch management program to address identified vulnerabilities.</li>
+            <li style="margin-bottom: 15px;"><strong>Security Monitoring:</strong> Enhance security monitoring capabilities to detect potential threats.</li>
+            <li style="margin-bottom: 15px;"><strong>Regular Assessments:</strong> Conduct periodic security assessments to maintain security posture.</li>
+        </ol>
+
+        <div class="footer">
+            {{ branding.footer_text or 'CONFIDENTIAL - Executive Summary' }}
+        </div>
+    </div>
+</body>
+</html>
