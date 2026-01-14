@@ -30,6 +30,7 @@ services:
     volumes:
       - ./backend:/app
       - backend-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://kali:changeme@postgres:5432/kali_tools}
       - REDIS_URL=redis://redis:6379/0
